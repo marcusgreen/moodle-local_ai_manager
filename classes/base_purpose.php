@@ -77,7 +77,7 @@ class base_purpose {
      *
      * @return array array of purpose subplugin names
      */
-    public static function get_all_purposes(): array {
+    public static function get_all_purposes(): ?array {
         return core_plugin_manager::instance()->get_enabled_plugins('aipurpose');
     }
 
