@@ -30,7 +30,6 @@ require_once($CFG->libdir . '/formslib.php');
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class tenant_config_form extends \moodleform {
-
     /**
      * Form definition.
      */
@@ -40,7 +39,7 @@ class tenant_config_form extends \moodleform {
         $mform = &$this->_form;
 
         $mform->addElement('hidden', 'tenant', $tenant);
-        $mform->setType('tenant', PARAM_ALPHANUM);
+        $mform->setType('tenant', PARAM_TEXT);
 
         $mform->addElement('selectyesno', 'tenantenabled', get_string('enable_ai_integration', 'local_ai_manager'));
 

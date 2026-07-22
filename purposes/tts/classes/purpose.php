@@ -39,7 +39,6 @@ use local_ai_manager\local\userinfo;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class purpose extends base_purpose {
-
     #[\Override]
     public function get_additional_purpose_options(): array {
         global $USER;
@@ -53,7 +52,7 @@ class purpose extends base_purpose {
         }
 
         // In this case we do not only provide additional purpose options, but also get them from the currently used connector.
-        $allowedoptionkeys = ['voices' => [], 'languages' => [], 'gender' => []];
+        $allowedoptionkeys = ['voices' => [], 'languages' => [], 'gender' => [], 'instructions' => ''];
         $connectoroptions = $connector->get_available_options();
         foreach ($connectoroptions as $key => $value) {
             if (!in_array($key, array_keys($allowedoptionkeys))) {

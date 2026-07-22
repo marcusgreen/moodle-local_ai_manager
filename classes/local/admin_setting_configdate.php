@@ -27,7 +27,6 @@ use core\output\html_writer;
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class admin_setting_configdate extends \admin_setting {
-
     /**
      * Returns current value of this setting.
      *
@@ -53,10 +52,17 @@ class admin_setting_configdate extends \admin_setting {
     }
 
     #[\Override]
-    public function output_html($data, $query='') {
+    public function output_html($data, $query = '') {
         $default = $this->get_defaultsetting();
-        if ($default) {
-            $defaultinfo = userdate($default, get_string('strftimedatetime', 'langconfig'));
+        if ($default && is_array($default)) {
+            $defaultinfo = sprintf(
+                '%02d.%02d.%04d %02d:%02d',
+                $default['mday'],
+                $default['mon'],
+                $default['year'],
+                $default['hours'],
+                $default['minutes']
+            );
         } else {
             $defaultinfo = 0;
         }
@@ -71,13 +77,13 @@ class admin_setting_configdate extends \admin_setting {
             $monopts[$i] = userdate(gmmktime(12, 0, 0, $i, 15, 2000), "%B");
         }
         $opts = [
-                'mday' => range(1, 31),
-                'mon' => $monopts,
-                'year' => range($yearnow - 10, $yearnow + 5),
-                ' ',
-                'hours' => range(0, 23),
-                ':',
-                'minutes' => range(0, 59),
+            'mday' => range(1, 31),
+            'mon' => $monopts,
+            'year' => range($yearnow - 10, $yearnow + 5),
+            ' ',
+            'hours' => range(0, 23),
+            ':',
+            'minutes' => range(0, 59),
         ];
 
         $out = '';
@@ -90,11 +96,11 @@ class admin_setting_configdate extends \admin_setting {
                 $range = array_combine($range, $range);
             }
             if ($type == 'hours' || $type == 'minutes') {
-                $range = array_map(function($item) {
+                $range = array_map(function ($item) {
                     return sprintf('%02d', $item);
                 }, $range);
             }
-            $out .= html_writer::select($range, $this->get_full_name().'['.$type.']', $data[$type], null);
+            $out .= html_writer::select($range, $this->get_full_name() . '[' . $type . ']', $data[$type], null);
         }
         $out = html_writer::div($out, 'd-flex flex-row');
 

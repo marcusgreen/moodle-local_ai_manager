@@ -36,9 +36,13 @@ use local_ai_manager\base_purpose;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class purpose extends base_purpose {
-
     #[\Override]
     public function get_additional_request_options(array $options): array {
         return [];
+    }
+
+    #[\Override]
+    public function format_output(string $output): string {
+        return clean_text($output);
     }
 }

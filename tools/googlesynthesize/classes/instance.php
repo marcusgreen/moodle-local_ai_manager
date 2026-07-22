@@ -29,10 +29,14 @@ use local_ai_manager\local\aitool_option_vertexai;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class instance extends base_instance {
-
     #[\Override]
     protected function extend_form_definition(\MoodleQuickForm $mform): void {
-        $mform->setDefault('endpoint', 'https://texttospeech.googleapis.com/v1/text:synthesize');
-        $mform->freeze('endpoint');
+        $mform->getElement('endpointdescription')->setValue(
+            get_string('endpointhint', 'aitool_googlesynthesize')
+            . '<br>' . get_string('endpointdefault', 'local_ai_manager', connector::DEFAULT_GOOGLE_SYNTHESIZE_ENDPOINT)
+        );
+        $mform->getElement('endpointdescription')->updateAttributes(
+            ['class' => 'text-body-secondary small text-break']
+        );
     }
 }

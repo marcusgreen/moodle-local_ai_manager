@@ -22,6 +22,7 @@ use GuzzleHttp\Psr7\Response;
 use local_ai_manager\local\prompt_response;
 use local_ai_manager\local\request_response;
 use local_ai_manager\local\unit;
+use local_ai_manager\plugininfo\aitool;
 use Psr\Http\Client\ClientExceptionInterface;
 use Psr\Http\Message\StreamInterface;
 
@@ -34,7 +35,6 @@ use Psr\Http\Message\StreamInterface;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 abstract class base_connector {
-
     /** @var base_instance the connector instance the connector is using */
     protected base_instance $instance;
 
@@ -50,9 +50,23 @@ abstract class base_connector {
     /**
      * Define available models.
      *
+     * IMPORTANT: You will have to define a key for every purpose. If your connector should not support
+     * certain purposes, return an empty array for this purpose.
+     *
+     * A unit test in base_connector_test class will check if you implemented all existing purposes.
+     *
      * @return array names of the available models
      */
     abstract public function get_models_by_purpose(): array;
+
+    /**
+     * Returns the list of models that are selectable when creating/editing AI tools in the frontend.
+     *
+     * @return array list of models
+     */
+    public function get_selectable_models(): array {
+        return $this->get_models();
+    }
 
     /**
      * Get the available models as plain array.
@@ -89,7 +103,11 @@ abstract class base_connector {
      * @return string the api key
      */
     protected function get_api_key(): string {
-        return $this->instance->get_apikey();
+        $globalapikey = get_config(aitool::get_component_name_by_connector($this), 'globalapikey');
+        if (empty($globalapikey)) {
+            return $this->instance->get_apikey();
+        }
+        return $this->instance->get_useglobalapikey() ? $globalapikey : $this->instance->get_apikey();
     }
 
     /**
@@ -163,12 +181,16 @@ abstract class base_connector {
      */
     public function make_request(array $data, request_options $requestoptions): request_response {
         $client = new http_client([
-                'timeout' => get_config('local_ai_manager', 'requesttimeout'),
-                'verify' => !empty(get_config('local_ai_manager', 'verifyssl')),
+            'timeout' => get_config('local_ai_manager', 'requesttimeout'),
+            'verify' => !empty(get_config('local_ai_manager', 'verifyssl')),
         ]);
 
         $options['headers'] = $this->get_headers();
         $options['body'] = json_encode($data);
+
+        if (empty($this->get_endpoint_url())) {
+            return request_response::create_from_error(404, get_string('error_http404endpointempty', 'local_ai_manager'), '');
+        }
 
         try {
             $response = $client->post($this->get_endpoint_url(), $options);
@@ -179,10 +201,10 @@ abstract class base_connector {
             $return = request_response::create_from_result($response->getBody());
         } else {
             $return = request_response::create_from_error(
-                    $response->getStatusCode(),
-                    get_string('error_sendingrequestfailed', 'local_ai_manager'),
-                    $response->getBody()->getContents(),
-                    $response->getBody()
+                $response->getStatusCode(),
+                get_string('error_sendingrequestfailed', 'local_ai_manager'),
+                $response->getBody()->getContents(),
+                $response->getBody()
             );
         }
         return $return;
@@ -250,8 +272,8 @@ abstract class base_connector {
      */
     protected function get_headers(): array {
         return [
-                'Authorization' => 'Bearer ' . $this->get_api_key(),
-                'Content-Type' => 'application/json;charset=utf-8',
+            'Authorization' => 'Bearer ' . $this->get_api_key(),
+            'Content-Type' => 'application/json;charset=utf-8',
         ];
     }
 

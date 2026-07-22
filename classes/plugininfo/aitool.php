@@ -17,7 +17,9 @@
 namespace local_ai_manager\plugininfo;
 
 use core\plugininfo\base;
+use core_component;
 use core_plugin_manager;
+use local_ai_manager\base_connector;
 
 /**
  * Plugininfo class for the subplugintype aitool.
@@ -28,7 +30,6 @@ use core_plugin_manager;
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class aitool extends base {
-
     #[\Override]
     public static function get_enabled_plugins() {
         global $DB;
@@ -43,8 +44,12 @@ class aitool extends base {
         }
 
         [$insql, $params] = $DB->get_in_or_equal($installed, SQL_PARAMS_NAMED);
-        $disabled = $DB->get_records_select('config_plugins', "plugin $insql AND name = 'enabled' AND value = '0'", $params,
-                'plugin ASC');
+        $disabled = $DB->get_records_select(
+            'config_plugins',
+            "plugin $insql AND name = 'enabled' AND value = '0'",
+            $params,
+            'plugin ASC'
+        );
         foreach ($disabled as $conf) {
             unset($plugins[explode('_', $conf->plugin, 2)[1]]);
         }
@@ -122,7 +127,8 @@ class aitool extends base {
             return true;
         }
         $sqllike = $DB->sql_like('configkey', '?');
-        $params = ['purpose_%_tool'];
+        $underscoreescaped = $DB->sql_like_escape('_');
+        $params = ["purpose{$underscoreescaped}%{$underscoreescaped}tool%"];
         $select = $sqllike;
         [$insql, $inparams] = $DB->get_in_or_equal($deletedinstanceids);
         $params = array_merge($params, $inparams);
@@ -130,5 +136,16 @@ class aitool extends base {
 
         $DB->delete_records_select('local_ai_manager_config', $select, $params);
         return true;
+    }
+
+    /**
+     * Get the component name of the aitool plugin by passing a connector object.
+     *
+     * @param base_connector $connector The connector object to return the component name for
+     * @return string the component name as string, for example 'aitool_gemini'
+     */
+    public static function get_component_name_by_connector(base_connector $connector): string {
+        $classname = get_class($connector);
+        return core_component::get_component_from_classname($classname);
     }
 }

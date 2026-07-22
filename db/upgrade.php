@@ -31,7 +31,8 @@ use local_ai_manager\local\userinfo;
  * @param int $oldversion Version number the plugin is being upgraded from.
  */
 function xmldb_local_ai_manager_upgrade($oldversion) {
-    global $DB;
+    global $CFG, $DB;
+    require_once($CFG->dirroot . '/local/ai_manager/db/upgradelib.php');
     $dbman = $DB->get_manager();
 
     if ($oldversion < 2024080101) {
@@ -45,7 +46,6 @@ function xmldb_local_ai_manager_upgrade($oldversion) {
     }
 
     if ($oldversion < 2024080900) {
-
         // Changing precision of field duration on table local_ai_manager_request_log to (20, 3).
         $table = new xmldb_table('local_ai_manager_request_log');
         $field = new xmldb_field('duration', XMLDB_TYPE_NUMBER, '20, 3', null, null, null, null, 'modelinfo');
@@ -122,7 +122,6 @@ function xmldb_local_ai_manager_upgrade($oldversion) {
     }
 
     if ($oldversion < 2024092600) {
-
         $sqllike = $DB->sql_like('configkey', ':configkeypattern');
         $sql = "SELECT * FROM {local_ai_manager_config} WHERE $sqllike";
         $rs = $DB->get_recordset_sql($sql, ['configkeypattern' => 'purpose_%_tool']);
@@ -133,11 +132,15 @@ function xmldb_local_ai_manager_upgrade($oldversion) {
             $roleextendedrecord = clone($record);
             unset($roleextendedrecord->id);
             $roleextendedrecord->configkey = $oldconfigkey . '_role_extended';
-            if (!$DB->record_exists('local_ai_manager_config',
+            if (
+                !$DB->record_exists(
+                    'local_ai_manager_config',
                     [
-                            'configkey' => $roleextendedrecord->configkey,
-                            'tenant' => $roleextendedrecord->tenant,
-                    ])) {
+                        'configkey' => $roleextendedrecord->configkey,
+                        'tenant' => $roleextendedrecord->tenant,
+                    ]
+                )
+            ) {
                 $DB->insert_record('local_ai_manager_config', $roleextendedrecord);
             }
         }
@@ -147,7 +150,6 @@ function xmldb_local_ai_manager_upgrade($oldversion) {
     }
 
     if ($oldversion < 2024110501) {
-
         // Changing type of field customfield1 on table local_ai_manager_instance to text.
         $table = new xmldb_table('local_ai_manager_instance');
         $field = new xmldb_field('customfield1', XMLDB_TYPE_TEXT, null, null, null, null, null, 'infolink');
@@ -166,7 +168,6 @@ function xmldb_local_ai_manager_upgrade($oldversion) {
     }
 
     if ($oldversion < 2024120200) {
-
         $rs = $DB->get_recordset('local_ai_manager_instance', ['connector' => 'gemini']);
         foreach ($rs as $record) {
             $record->customfield2 = 'googleai';
@@ -181,7 +182,6 @@ function xmldb_local_ai_manager_upgrade($oldversion) {
     }
 
     if ($oldversion < 2025010701) {
-
         // Define field scope to be added to local_ai_manager_userinfo.
         $table = new xmldb_table('local_ai_manager_userinfo');
         $field = new xmldb_field('scope', XMLDB_TYPE_INTEGER, '1', null, null, null, null, 'confirmed');
@@ -256,7 +256,6 @@ function xmldb_local_ai_manager_upgrade($oldversion) {
     }
 
     if ($oldversion < 2025021700) {
-
         $table = new xmldb_table('local_ai_manager_request_log');
         $field = new xmldb_field('coursecontextid', XMLDB_TYPE_INTEGER, '10', null, null, null, null, 'contextid');
 
@@ -309,6 +308,50 @@ function xmldb_local_ai_manager_upgrade($oldversion) {
 
         // Ai_manager savepoint reached.
         upgrade_plugin_savepoint(true, 2025073000, 'local', 'ai_manager');
+    }
+
+    if ($oldversion < 2025073100) {
+        $rs = $DB->get_recordset('local_ai_manager_instance', ['model' => 'openaitts_preconfigured_azure']);
+        foreach ($rs as $record) {
+            $record->model = 'openaitts_tts-1_preconfigured_azure';
+            $DB->update_record('local_ai_manager_instance', $record);
+        }
+        $rs->close();
+
+        $rs = $DB->get_recordset('local_ai_manager_request_log', ['model' => 'openaitts_preconfigured_azure']);
+        foreach ($rs as $record) {
+            $record->model = 'openaitts_tts-1_preconfigured_azure';
+            $record->modelinfo = 'openaitts_tts-1_preconfigured_azure';
+            $DB->update_record('local_ai_manager_request_log', $record);
+        }
+        $rs->close();
+
+        upgrade_plugin_savepoint(true, 2025073100, 'local', 'ai_manager');
+    }
+
+    if ($oldversion < 2025082900) {
+        unset_config('dataprocessing', 'local_ai_manager');
+        unset_config('legalroles', 'local_ai_manager');
+        unset_config('termsofuselegal', 'local_ai_manager');
+
+        upgrade_plugin_savepoint(true, 2025082900, 'local', 'ai_manager');
+    }
+
+    if ($oldversion < 2026020600) {
+        $table = new xmldb_table('local_ai_manager_instance');
+        $field = new xmldb_field('useglobalapikey', XMLDB_TYPE_INTEGER, '1', null, null, null, null, 'apikey');
+
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        upgrade_plugin_savepoint(true, 2026020600, 'local', 'ai_manager');
+    }
+
+    if ($oldversion < 2026042000) {
+        local_ai_manager_cleanup_legacy_azure_instance_data();
+
+        upgrade_plugin_savepoint(true, 2026042000, 'local', 'ai_manager');
     }
 
     return true;

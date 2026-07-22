@@ -18,6 +18,7 @@ namespace aitool_telli;
 
 use local_ai_manager\base_instance;
 use local_ai_manager\local\aitool_option_temperature;
+use local_ai_manager\local\connector_factory;
 use stdClass;
 
 /**
@@ -29,9 +30,13 @@ use stdClass;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class instance extends base_instance {
-
     #[\Override]
     protected function extend_form_definition(\MoodleQuickForm $mform): void {
+        // We do not want the checkbox to use a global API key if there is one. But instead want to force the usage of
+        // a global API key in this specific connector plugin.
+        if ($mform->elementExists('useglobalapikey')) {
+            $mform->removeElement('useglobalapikey');
+        }
         $globalapikey = get_config('aitool_telli', 'globalapikey');
         if (!empty($globalapikey)) {
             $mform->removeElement('apikey');
@@ -40,7 +45,15 @@ class instance extends base_instance {
         if (!empty($globalendpoint)) {
             $mform->removeElement('endpoint');
         }
-        aitool_option_temperature::extend_form_definition($mform);
+        $connectorfactory = \core\di::get(connector_factory::class);
+        $connectorinstance = $connectorfactory->get_connector_by_connectorname($this->connector);
+        aitool_option_temperature::extend_form_definition(
+            $mform,
+            array_merge(
+                $connectorinstance->get_models_by_purpose()['imggen'],
+                ['o1', 'o1-mini', 'o3', 'o3-mini', 'o4-mini', 'gpt-5.5']
+            )
+        );
     }
 
     #[\Override]
@@ -62,7 +75,6 @@ class instance extends base_instance {
             $this->set_endpoint('');
         }
         $this->set_customfield1($temperature);
-
     }
 
     #[\Override]
@@ -80,16 +92,4 @@ class instance extends base_instance {
     public function get_temperature(): float {
         return floatval($this->get_customfield1());
     }
-
-    /**
-     * We add this so the AIS API connector can inherit from ChatGPT connector.
-     *
-     * We just disable azure by making this function always return false.
-     *
-     * @return bool false
-     */
-    public function azure_enabled(): bool {
-        return false;
-    }
-
 }

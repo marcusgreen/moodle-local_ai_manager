@@ -16,6 +16,7 @@
 
 namespace aitool_openaitts;
 
+use local_ai_manager\base_purpose;
 use local_ai_manager\local\prompt_response;
 use local_ai_manager\local\unit;
 use local_ai_manager\local\usage;
@@ -31,27 +32,47 @@ use Psr\Http\Message\StreamInterface;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class connector extends \local_ai_manager\base_connector {
-
+    /** @var string Default OpenAI text-to-speech endpoint. */
+    public const DEFAULT_OPENAI_TTS_ENDPOINT = 'https://api.openai.com/v1/audio/speech';
     #[\Override]
     public function get_models_by_purpose(): array {
-        return [
-                'tts' => ['tts-1'],
-        ];
+        $modelsbypurpose = base_purpose::get_installed_purposes_array();
+        $modelsbypurpose['tts'] = ['tts-1', 'gpt-4o-mini-tts'];
+        foreach ($modelsbypurpose['tts'] as $model) {
+            $modelsbypurpose['tts'][] = instance::get_model_specific_azure_model_name($model);
+        }
+        return $modelsbypurpose;
+    }
+
+    #[\Override]
+    public function get_selectable_models(): array {
+        // Do not offer the azure fake model identifiers as option.
+        return array_filter(
+            $this->get_models(),
+            fn($model) => instance::extract_model_name_from_azure_model_name($model) === $model
+        );
     }
 
     #[\Override]
     public function get_prompt_data(string $prompttext, request_options $requestoptions): array {
         $options = $requestoptions->get_options();
         $data = [
-                'input' => $prompttext,
-                'voice' => empty($options['voices'][0]) ? 'alloy' : $options['voices'][0],
+            'input' => $prompttext,
+            'voice' => empty($options['voices'][0]) ? 'alloy' : $options['voices'][0],
         ];
+        if (
+            ($this->instance->get_model() === 'gpt-4o-mini-tts'
+                || instance::get_model_specific_azure_model_name($this->instance->get_model()) === 'gpt-4o-mini-tts')
+            && !empty($options['instructions'])
+        ) {
+            $data['instructions'] = $options['instructions'];
+        }
         if (!$this->instance->azure_enabled()) {
             // If azure is enabled, the model will be preconfigured in the azure resource, so we do not need to send it.
             $data['model'] = $this->instance->get_model();
         } else {
             // OpenAI via Azure expects the model to be sent despite being preconfigured in the resource. So we hardcode "tts".
-            $data['model'] = 'tts';
+            $data['model'] = 'ineffective_parameter_value';
         }
 
         return $data;
@@ -66,7 +87,7 @@ class connector extends \local_ai_manager\base_connector {
         }
         if (in_array('Authorization', array_keys($headers))) {
             unset($headers['Authorization']);
-            $headers['api-key'] = $this->instance->get_apikey();
+            $headers['api-key'] = $this->get_api_key();
         }
         return $headers;
     }
@@ -77,24 +98,29 @@ class connector extends \local_ai_manager\base_connector {
     }
 
     #[\Override]
+    protected function get_endpoint_url(): string {
+        return $this->instance->get_endpoint() ?: self::DEFAULT_OPENAI_TTS_ENDPOINT;
+    }
+
+    #[\Override]
     public function execute_prompt_completion(StreamInterface $result, request_options $requestoptions): prompt_response {
         global $USER;
         $options = $requestoptions->get_options();
         $fs = get_file_storage();
         $fileinfo = [
-                'contextid' => \context_user::instance($USER->id)->id,
-                'component' => 'user',
-                'filearea' => 'draft',
-                'itemid' => $options['itemid'],
-                'filepath' => '/',
-                'filename' => $options['filename'],
+            'contextid' => \context_user::instance($USER->id)->id,
+            'component' => 'user',
+            'filearea' => 'draft',
+            'itemid' => $options['itemid'],
+            'filepath' => '/',
+            'filename' => $options['filename'],
         ];
         $file = $fs->create_file_from_string($fileinfo, $result);
 
         $filepath = \moodle_url::make_draftfile_url(
-                $file->get_itemid(),
-                $file->get_filepath(),
-                $file->get_filename()
+            $file->get_itemid(),
+            $file->get_filepath(),
+            $file->get_filename()
         )->out();
 
         return prompt_response::create_from_result($this->instance->get_model(), new usage(1.0), $filepath);
@@ -102,15 +128,27 @@ class connector extends \local_ai_manager\base_connector {
 
     #[\Override]
     public function get_available_options(): array {
-        return [
-                'voices' => [
-                         ['key' => 'alloy', 'displayname' => 'Alloy'],
-                         ['key' => 'echo', 'displayname' => 'Echo'],
-                         ['key' => 'fable', 'displayname' => 'Fable'],
-                         ['key' => 'onyx', 'displayname' => 'Onyx'],
-                         ['key' => 'nova', 'displayname' => 'Nova'],
-                         ['key' => 'shimmer', 'displayname' => 'Shimmer'],
-                ],
+        $options = [
+            'voices' => [
+                ['key' => 'alloy', 'displayname' => 'Alloy'],
+                ['key' => 'ash', 'displayname' => 'Ash'],
+                ['key' => 'ballad', 'displayname' => 'Ballad'],
+                ['key' => 'coral', 'displayname' => 'Coral'],
+                ['key' => 'echo', 'displayname' => 'Echo'],
+                ['key' => 'fable', 'displayname' => 'Fable'],
+                ['key' => 'onyx', 'displayname' => 'Onyx'],
+                ['key' => 'nova', 'displayname' => 'Nova'],
+                ['key' => 'sage', 'displayname' => 'Sage'],
+                ['key' => 'shimmer', 'displayname' => 'Shimmer'],
+                ['key' => 'verse', 'displayname' => 'Verse'],
+            ],
         ];
+        if (
+            $this->instance->get_model() === 'gpt-4o-mini-tts'
+            || instance::extract_model_name_from_azure_model_name($this->instance->get_model()) === 'gpt-4o-mini-tts'
+        ) {
+            $options['instructions'] = PARAM_TEXT;
+        }
+        return $options;
     }
 }

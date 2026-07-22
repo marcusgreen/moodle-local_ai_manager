@@ -35,7 +35,7 @@ require_login();
 global $CFG, $DB, $OUTPUT, $PAGE, $USER;
 
 global $PAGE;
-$tenantid = optional_param('tenant', '', PARAM_ALPHANUM);
+$tenantid = optional_param('tenant', '', PARAM_TEXT);
 $contextid = optional_param('contextid', '', PARAM_INT);
 
 if (!empty($tenantid) && !empty($contextid)) {
@@ -58,7 +58,6 @@ if ($context->contextlevel === CONTEXT_COURSE) {
 } else {
     require_capability('local/ai_manager:viewtenantprompts', $context);
 }
-
 
 $url = new moodle_url('/local/ai_manager/view_prompts.php', ['contextid' => $context->id]);
 $PAGE->set_url($url);
@@ -94,12 +93,13 @@ if ($contextselectorform->is_cancelled()) {
     $contextselectorform->display();
 
     // Render View prompts table.
-    echo html_writer::start_div('',
-            [
-                    'id' => 'local_ai_manager-viewprompts',
-                    'data-contextid' => $context->id,
-                    'data-contextdisplayname' => ai_manager_utils::get_context_displayname($context, $tenant),
-            ]
+    echo html_writer::start_div(
+        '',
+        [
+            'id' => 'local_ai_manager-viewprompts',
+            'data-contextid' => $context->id,
+            'data-contextdisplayname' => ai_manager_utils::get_context_displayname($context, $tenant),
+        ]
     );
 
     $uniqid = 'view-prompts-table-' . uniqid();

@@ -27,22 +27,41 @@ use stdClass;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class aitool_option_temperature {
-
     /**
      * Extends the form definition of the edit instance form by adding the temperature option.
      *
      * @param \MoodleQuickForm $mform the mform object
      */
-    public static function extend_form_definition(\MoodleQuickForm $mform): void {
+    public static function extend_form_definition(\MoodleQuickForm $mform, array $modelswithouttemperature = []): void {
         $radioarray = [];
-        $radioarray[] = $mform->createElement('radio', 'temperatureprechoice', '',
-                get_string('temperature_more_creative', 'local_ai_manager'), 'selection_creative');
-        $radioarray[] = $mform->createElement('radio', 'temperatureprechoice', '',
-                get_string('temperature_creative_balanced', 'local_ai_manager'), 'selection_balanced');
-        $radioarray[] = $mform->createElement('radio', 'temperatureprechoice', '',
-                get_string('temperature_more_precise', 'local_ai_manager'), 'selection_precise');
-        $mform->addGroup($radioarray, 'temperatureprechoicearray', get_string('temperature_defaultsetting', 'local_ai_manager'),
-                ['<br/>'], false);
+        $radioarray[] = $mform->createElement(
+            'radio',
+            'temperatureprechoice',
+            '',
+            get_string('temperature_more_creative', 'local_ai_manager'),
+            'selection_creative'
+        );
+        $radioarray[] = $mform->createElement(
+            'radio',
+            'temperatureprechoice',
+            '',
+            get_string('temperature_creative_balanced', 'local_ai_manager'),
+            'selection_balanced'
+        );
+        $radioarray[] = $mform->createElement(
+            'radio',
+            'temperatureprechoice',
+            '',
+            get_string('temperature_more_precise', 'local_ai_manager'),
+            'selection_precise'
+        );
+        $mform->addGroup(
+            $radioarray,
+            'temperatureprechoicearray',
+            get_string('temperature_defaultsetting', 'local_ai_manager'),
+            ['<br/>'],
+            false
+        );
         $mform->setDefault('temperatureprechoice', 'selection_balanced');
 
         $mform->addElement('checkbox', 'temperatureusecustom', get_string('temperature_use_custom_value', 'local_ai_manager'));
@@ -50,7 +69,7 @@ class aitool_option_temperature {
         $mform->addElement('float', 'temperaturecustom', get_string('temperature_custom_value', 'local_ai_manager'));
         $mform->disabledIf('temperaturecustom', 'temperatureusecustom');
         $mform->disabledIf('temperatureprechoicearray', 'temperatureusecustom', 'checked');
-        foreach (['o1', 'o1-mini', 'o3', 'o3-mini', 'o4-mini'] as $modelwithouttemperature) {
+        foreach ($modelswithouttemperature as $modelwithouttemperature) {
             $mform->hideIf('temperatureprechoicearray', 'model', 'eq', $modelwithouttemperature);
             $mform->hideIf('temperatureusecustom', 'model', 'eq', $modelwithouttemperature);
             $mform->hideIf('temperaturecustom', 'model', 'eq', $modelwithouttemperature);
@@ -118,8 +137,10 @@ class aitool_option_temperature {
      */
     public static function validate_temperature(array $data): array {
         $errors = [];
-        if (!empty($data['temperaturecustom']) &&
-                (floatval($data['temperaturecustom']) < 0 || floatval($data['temperaturecustom']) > 1.0)) {
+        if (
+            !empty($data['temperaturecustom'])
+            && (floatval($data['temperaturecustom']) < 0 || floatval($data['temperaturecustom']) > 1.0)
+        ) {
             $errors['temperaturecustom'] = get_string('formvalidation_editinstance_temperaturerange', 'local_ai_manager');
         }
         return $errors;

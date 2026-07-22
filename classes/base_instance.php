@@ -32,7 +32,6 @@ use stdClass;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class base_instance {
-
     /** @var string the string representing that a model cannot be chosen, but is preconfigured by the external AI service */
     public const PRECONFIGURED_MODEL = 'preconfigured';
 
@@ -56,6 +55,9 @@ class base_instance {
 
     /** @var ?string The API key of the instance */
     protected ?string $apikey = null;
+
+    /** @var ?string If a eventually configured global API key should be used */
+    protected ?string $useglobalapikey = null;
 
     /** @var ?string The model which is configured for this instance */
     protected ?string $model = null;
@@ -99,33 +101,35 @@ class base_instance {
         }
         $this->record = $record;
         [
-                $this->id,
-                $this->name,
-                $this->tenant,
-                $this->connector,
-                $this->endpoint,
-                $this->apikey,
-                $this->model,
-                $this->infolink,
-                $this->customfield1,
-                $this->customfield2,
-                $this->customfield3,
-                $this->customfield4,
-                $this->customfield5,
+            $this->id,
+            $this->name,
+            $this->tenant,
+            $this->connector,
+            $this->endpoint,
+            $this->apikey,
+            $this->useglobalapikey,
+            $this->model,
+            $this->infolink,
+            $this->customfield1,
+            $this->customfield2,
+            $this->customfield3,
+            $this->customfield4,
+            $this->customfield5,
         ] = [
-                $record->id,
-                $record->name,
-                $record->tenant,
-                $record->connector,
-                $record->endpoint,
-                $record->apikey,
-                $record->model,
-                $record->infolink,
-                $record->customfield1,
-                $record->customfield2,
-                $record->customfield3,
-                $record->customfield4,
-                $record->customfield5,
+            $record->id,
+            $record->name,
+            $record->tenant,
+            $record->connector,
+            $record->endpoint,
+            $record->apikey,
+            $record->useglobalapikey,
+            $record->model,
+            $record->infolink,
+            $record->customfield1,
+            $record->customfield2,
+            $record->customfield3,
+            $record->customfield4,
+            $record->customfield5,
         ];
     }
 
@@ -141,6 +145,7 @@ class base_instance {
         $record->connector = $this->connector;
         $record->endpoint = $this->endpoint;
         $record->apikey = $this->apikey;
+        $record->useglobalapikey = $this->get_useglobalapikey() ? 1 : 0;
         $record->model = $this->model;
         $record->infolink = $this->infolink;
         $record->customfield1 = $this->customfield1;
@@ -206,9 +211,9 @@ class base_instance {
     /**
      * Standard getter.
      *
-     * @return string the name of the instance
+     * @return ?string the name of the instance or null if not set
      */
-    public function get_name(): string {
+    public function get_name(): ?string {
         return $this->name;
     }
 
@@ -224,9 +229,9 @@ class base_instance {
     /**
      * Standard getter.
      *
-     * @return string the tenant identifier
+     * @return string the tenant identifier or null if not set
      */
-    public function get_tenant(): string {
+    public function get_tenant(): ?string {
         return $this->tenant;
     }
 
@@ -242,7 +247,7 @@ class base_instance {
     /**
      * Standard getter.
      *
-     * @return ?string the connector identifier
+     * @return ?string the connector identifier or null if not set
      */
     public function get_connector(): ?string {
         return $this->connector;
@@ -260,9 +265,9 @@ class base_instance {
     /**
      * Standard getter.
      *
-     * @return string the endpoint of this instance
+     * @return ?string the endpoint of this instance or null if not set
      */
-    public function get_endpoint(): string {
+    public function get_endpoint(): ?string {
         return $this->endpoint;
     }
 
@@ -278,7 +283,7 @@ class base_instance {
     /**
      * Standard getter.
      *
-     * @return ?string the apikey, can be null if not set
+     * @return ?string the api key or null if not set
      */
     public function get_apikey(): ?string {
         return $this->apikey;
@@ -296,9 +301,27 @@ class base_instance {
     /**
      * Standard getter.
      *
-     * @return string name of the model
+     * @return bool if an eventually global api key should be used
      */
-    public function get_model(): string {
+    public function get_useglobalapikey(): bool {
+        return !empty($this->useglobalapikey);
+    }
+
+    /**
+     * Standard setter.
+     *
+     * @param bool $useglobalapikey The API key of this instance
+     */
+    public function set_useglobalapikey(bool $useglobalapikey): void {
+        $this->useglobalapikey = $useglobalapikey;
+    }
+
+    /**
+     * Standard getter.
+     *
+     * @return ?string name of the model or null if not set
+     */
+    public function get_model(): ?string {
         return $this->model;
     }
 
@@ -314,7 +337,7 @@ class base_instance {
     /**
      * Standard getter.
      *
-     * @return ?string the info link, can be null
+     * @return ?string the info link or null if not set
      */
     public function get_infolink(): ?string {
         return $this->infolink;
@@ -429,7 +452,7 @@ class base_instance {
             return true;
         } else {
             $this->load();
-            return is_null($this->record);
+            return !is_null($this->record);
         }
     }
 
@@ -448,6 +471,7 @@ class base_instance {
         $data->connector = $this->get_connector();
         $data->endpoint = $this->get_endpoint();
         $data->apikey = $this->get_apikey();
+        $data->useglobalapikey = $this->get_useglobalapikey();
         $data->model = $this->get_model();
         $data->infolink = $this->get_infolink();
         foreach ($this->get_extended_formdata() as $key => $value) {
@@ -486,7 +510,7 @@ class base_instance {
         $mform->addElement('text', 'name', get_string('instancename', 'local_ai_manager'), $textelementparams);
         $mform->setType('name', PARAM_TEXT);
         $mform->addElement('text', 'tenant', get_string('tenant', 'local_ai_manager'), $textelementparams);
-        $mform->setType('tenant', PARAM_ALPHANUM);
+        $mform->setType('tenant', PARAM_TEXT);
         if (empty($this->_customdata['id'])) {
             $mform->setDefault('tenant', $customdata['tenant']);
         }
@@ -495,14 +519,34 @@ class base_instance {
         }
 
         $connector = $customdata['connector'];
-        $mform->addElement('text', 'connector', get_string('aitool', 'local_ai_manager'), $textelementparams);
+        $mform->addElement('hidden', 'connector', $connector);
+        $connectorfactory = \core\di::get(connector_factory::class);
+        $connectorcomponentname =
+            aitool::get_component_name_by_connector($connectorfactory->get_connector_by_connectorname($connector));
+        $mform->addElement(
+            'static',
+            'connectordisplayname',
+            get_string('aitool', 'local_ai_manager'),
+            get_string('pluginname', $connectorcomponentname)
+        );
         $mform->setType('connector', PARAM_TEXT);
-        // That we have a valid connector here is being ensured by edit_instance.php.
-        $mform->setDefault('connector', $connector);
-        $mform->freeze('connector');
 
         $mform->addElement('text', 'endpoint', get_string('endpoint', 'local_ai_manager'), $textelementparams);
         $mform->setType('endpoint', PARAM_URL);
+        $mform->addElement('static', 'endpointdescription', '', '');
+
+        if (get_config($connectorcomponentname, 'globalapikey')) {
+            // Only show the "use global apikey" checkbox if there is a global apikey configured.
+            // Otherwise, it would not make sense to show that option.
+            $mform->addElement(
+                'advcheckbox',
+                'useglobalapikey',
+                get_string('globalapikey', 'local_ai_manager'),
+                get_string('useglobalapikey', 'local_ai_manager')
+            );
+            $mform->setType('useglobalapikey', PARAM_BOOL);
+            $mform->hideIf('apikey', 'useglobalapikey', 'checked');
+        }
 
         $mform->addElement('passwordunmask', 'apikey', get_string('apikey', 'local_ai_manager'), $textelementparams);
         $mform->setType('apikey', PARAM_TEXT);
@@ -510,7 +554,7 @@ class base_instance {
         $classname = '\\aitool_' . $connector . '\\connector';
         $connectorobject = \core\di::get($classname);
         $availablemodels = [];
-        foreach ($connectorobject->get_models() as $modelname) {
+        foreach ($connectorobject->get_selectable_models() as $modelname) {
             // phpcs:disable moodle.Commenting.TodoComment.MissingInfoInline
             // TODO maybe add lang strings, so we have $availablemodels[$modelname] = get_string($modelname); or sth similar.
             // phpcs:enable moodle.Commenting.TodoComment.MissingInfoInline
@@ -531,12 +575,12 @@ class base_instance {
      */
     final public function store_formdata(stdClass $data): void {
         $this->set_name(trim($data->name));
-        if (!empty($data->endpoint)) {
-            $this->set_endpoint(trim($data->endpoint));
-        }
+        $this->endpoint = !empty($data->endpoint) ? trim($data->endpoint) : null;
         $this->set_apikey(!empty($data->apikey) ? trim($data->apikey) : '');
+        $this->set_useglobalapikey(!empty($data->useglobalapikey));
         $this->set_connector($data->connector);
-        $this->set_tenant(trim($data->tenant));
+        $tenantvalue = trim($data->tenant);
+        $this->set_tenant(empty($tenantvalue) ? tenant::DEFAULT_IDENTIFIER : $tenantvalue);
         if (empty($data->model)) {
             // This is only a fallback. If the connector does not support the selection of a model,
             // it is supposed to overwrite this default value in the extend_store_formdata function.
@@ -571,9 +615,11 @@ class base_instance {
         if (empty($data['name'])) {
             $errors['name'] = get_string('formvalidation_editinstance_name', 'local_ai_manager');
         }
-        if (!empty($data['endpoint'])
-                && str_starts_with($data['endpoint'], 'http://')
-                && !str_starts_with($data['endpoint'], 'https://')) {
+        if (
+            !empty($data['endpoint'])
+            && str_starts_with($data['endpoint'], 'http://')
+            && !str_starts_with($data['endpoint'], 'https://')
+        ) {
             $errors['endpoint'] = get_string('formvalidation_editinstance_endpointnossl', 'local_ai_manager');
         }
         return $errors + $this->extend_validation($data, $files);
@@ -625,7 +671,7 @@ class base_instance {
 
     /**
      * Function which determines the supported purposes based on the definitions of available models in the connector class.
-
+     *
      * @return array list of purpose names
      */
     final public function supported_purposes(): array {
@@ -633,10 +679,6 @@ class base_instance {
             return [];
         }
         $connector = \core\di::get(connector_factory::class)->get_connector_by_connectorname($this->connector);
-        if (!in_array($this->get_model(), $connector->get_models())) {
-            // This typically is the case if we are using a model that is preconfigured (for example when using Azure).
-            return array_keys($connector->get_models_by_purpose());
-        }
         $purposesofcurrentmodel = [];
         foreach ($connector->get_models_by_purpose() as $purpose => $models) {
             if (in_array($this->get_model(), $models)) {

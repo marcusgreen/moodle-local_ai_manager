@@ -39,7 +39,6 @@ use local_ai_manager\local\userinfo;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class purpose extends base_purpose {
-
     #[\Override]
     public function get_additional_purpose_options(): array {
         global $USER;
@@ -48,11 +47,10 @@ class purpose extends base_purpose {
         $connector = $factory->get_connector_by_purpose($this->get_plugin_name(), $userinfo->get_role());
         $instance = $connector->get_instance();
         if (!in_array($this->get_plugin_name(), $instance->supported_purposes())) {
-            // Currently selected instance does not support tts, so we do not add any options.
             return [];
         }
 
-        // In this case we do not only provide additional purpose options, but also get them from the currently used connector.
+        // In this case we do not only provide additional purpose options but also get them from the currently used connector.
         $allowedoptionkeys = ['sizes' => []];
         $connectoroptions = $connector->get_available_options();
         foreach ($connectoroptions as $key => $value) {
@@ -80,5 +78,4 @@ class purpose extends base_purpose {
         // The clean_param is only to be extra safe, there shouldn't be any tags in the output anyway.
         return clean_param($output, PARAM_NOTAGS);
     }
-
 }
