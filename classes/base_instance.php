@@ -616,7 +616,8 @@ class base_instance {
             $errors['name'] = get_string('formvalidation_editinstance_name', 'local_ai_manager');
         }
         if (
-            !empty($data['endpoint'])
+            !get_config('local_ai_manager', 'allowhttpendpoints')
+            && !empty($data['endpoint'])
             && str_starts_with($data['endpoint'], 'http://')
             && !str_starts_with($data['endpoint'], 'https://')
         ) {

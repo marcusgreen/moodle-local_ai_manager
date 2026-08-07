@@ -90,6 +90,15 @@ if ($hassiteconfig) {
 
         $settings->add(
             new admin_setting_configcheckbox(
+                'local_ai_manager/allowhttpendpoints',
+                new lang_string('allowhttpendpoints', 'local_ai_manager'),
+                new lang_string('allowhttpendpointsdesc', 'local_ai_manager'),
+                0
+            )
+        );
+
+        $settings->add(
+            new admin_setting_configcheckbox(
                 'local_ai_manager/restricttenants',
                 new lang_string('restricttenants', 'local_ai_manager'),
                 new lang_string('restricttenants', 'local_ai_manager'),
