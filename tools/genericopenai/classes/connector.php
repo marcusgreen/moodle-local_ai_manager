@@ -76,12 +76,20 @@ class connector extends \local_ai_manager\base_connector {
         // phpcs:enable moodle.Commenting.TodoComment.MissingInfoInline
         $content = json_decode($result->getContents(), true);
 
+        // Some OpenAI-compatible endpoints do not return the "model" key in the response,
+        // so fall back to the configured model of the instance.
+        $model = $content['model'] ?? $this->get_instance()->get_model();
+
+        // Some OpenAI-compatible endpoints omit the "usage" object or individual token counts,
+        // so default any missing values to 0 to avoid type errors.
+        $usage = $content['usage'] ?? [];
+
         return prompt_response::create_from_result(
-            $content['model'],
+            $model,
             new usage(
-                (float) $content['usage']['total_tokens'],
-                (float) $content['usage']['prompt_tokens'],
-                (float) $content['usage']['completion_tokens']
+                (float) ($usage['total_tokens'] ?? 0),
+                (float) ($usage['prompt_tokens'] ?? 0),
+                (float) ($usage['completion_tokens'] ?? 0)
             ),
             $content['choices'][0]['message']['content']
         );
