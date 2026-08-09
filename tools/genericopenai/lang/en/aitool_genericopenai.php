@@ -25,5 +25,6 @@
 
 $string['adddescription'] = 'GenericOpenAI is a tool to allow connections to any LLM Inference service that supports the OpenAI API specification..';
 $string['err_contentfilter'] = 'Your request was rejected as a result of the content filter of the external tool. Your prompt probably requests something that is not allowed.';
+$string['err_invalidresponse'] = 'The external tool returned an unexpected response that did not contain a valid message. See the debug information for the raw response.';
 $string['pluginname'] = 'GenericOpenAI';
 $string['privacy:metadata'] = 'The local ai_manager tool subplugin "GenericOpenAI" does not store any personal data.';

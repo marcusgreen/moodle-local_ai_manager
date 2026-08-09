@@ -74,7 +74,20 @@ class connector extends \local_ai_manager\base_connector {
             If not, we need to do some error handling and return prompt_response::create_from_error(...
         */
         // phpcs:enable moodle.Commenting.TodoComment.MissingInfoInline
-        $content = json_decode($result->getContents(), true);
+        $rawcontent = $result->getContents();
+        $content = json_decode($rawcontent, true);
+
+        // If the response does not contain a message, the endpoint returned something unexpected
+        // (an error payload, a non-JSON body, or a differently shaped response). Surface it as an
+        // error instead of letting a null reach create_from_result() and throwing a TypeError.
+        $messagecontent = $content['choices'][0]['message']['content'] ?? null;
+        if (!is_string($messagecontent)) {
+            return prompt_response::create_from_error(
+                500,
+                get_string('err_invalidresponse', 'aitool_genericopenai'),
+                $rawcontent
+            );
+        }
 
         // Some OpenAI-compatible endpoints do not return the "model" key in the response,
         // so fall back to the configured model of the instance.
@@ -91,7 +104,7 @@ class connector extends \local_ai_manager\base_connector {
                 (float) ($usage['prompt_tokens'] ?? 0),
                 (float) ($usage['completion_tokens'] ?? 0)
             ),
-            $content['choices'][0]['message']['content']
+            $messagecontent
         );
     }
 
